@@ -54,7 +54,7 @@ This service is designed to be **secure**, **idempotent**, and **resilient**, ca
 
 ## UML Class Diagram
 
-![UML Class Diagram](/classdigram/airline-management-system/payment-service/payment-service.png)
+![UML Class Diagram](/classdiagram/airline-management-system/payment-service/payment-service.png)
 
 #### Key Components Explained in the Diagram:
 * PaymentController: Handles incoming HTTP requests for initiation and verification. 
@@ -114,7 +114,7 @@ docker logs -f payment-service
 ```
 
 ## Debugging & Verification Commands
-Use these commands to "exec" (log in) to the running containers and verify data manually.
+Use these commands to "exec" (log in) to the runnixng containers and verify data manually.
 
 ### 1. Kafka: Check Topics & Messages
 Verify that services are communicating correctly.
