@@ -33,6 +33,15 @@ public class SeatController {
         return ResponseEntity.ok(seatLockService.acquireSeatLock(flightId, seatNumber, userId));
     }
 
+    @Operation(summary = "Unlock a seat", description = "Called by Booking Service if Payment Fails")
+    @PostMapping("/unlock")
+    public ResponseEntity<String> unlockSeat(
+            @RequestParam Long flightId,
+            @RequestParam String seatNumber) {
+        seatLockService.releaseSeatLock(flightId, seatNumber);
+        return ResponseEntity.ok("Seat unlocked successfully");
+    }
+
     @PostMapping("/confirm")
     public ResponseEntity<Void> confirmSeat(
             @RequestParam Long flightId,

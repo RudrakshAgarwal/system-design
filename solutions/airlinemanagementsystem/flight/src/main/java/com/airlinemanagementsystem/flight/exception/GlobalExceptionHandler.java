@@ -14,7 +14,6 @@ import java.time.LocalDateTime;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Handle Flight Not Found (404)
     @ExceptionHandler(FlightNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(FlightNotFoundException ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -27,7 +26,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.NOT_FOUND);
     }
 
-    // Handle Seat Locking Issues (409 Conflict)
     @ExceptionHandler(SeatAlreadyLockedException.class)
     public ResponseEntity<ErrorResponse> handleSeatLock(SeatAlreadyLockedException ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -40,7 +38,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
-    // Handle Optimistic Locking Failures (Concurrent DB updates)
     @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
     public ResponseEntity<ErrorResponse> handleOptimisticLock(Exception ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -53,7 +50,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.CONFLICT);
     }
 
-    // Catch-all for unexpected errors (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(
@@ -79,7 +75,6 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 
-    // Handle Database Integrity Errors (e.g., Duplicate Tail Number)
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(org.springframework.dao.DataIntegrityViolationException ex, HttpServletRequest request) {
         ErrorResponse error = new ErrorResponse(

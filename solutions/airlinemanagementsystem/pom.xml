@@ -17,6 +17,7 @@
     <modules>
         <module>flight</module>
         <module>booking</module>
+        <module>payement</module>
     </modules>
 
     <dependencies>

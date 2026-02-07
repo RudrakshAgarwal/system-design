@@ -12,5 +12,5 @@ public class SeatResponseDTO {
     private String seatNumber;
     private SeatType seatType;
     private SeatStatus status;
-    private Double priceAdjustment; // e.g., +$50 for Exit Row
+    private Double priceAdjustment;
 }

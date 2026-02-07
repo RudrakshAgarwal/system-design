@@ -5,12 +5,14 @@ import com.airlinemanagementsystem.flight.entity.Seat;
 import com.airlinemanagementsystem.flight.entity.SeatStatus;
 import com.airlinemanagementsystem.flight.repository.SeatRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SeatService {
@@ -26,13 +28,10 @@ public class SeatService {
         return seatRepository.findByFlightId(flightId).stream()
                 .map(seat -> {
                     SeatStatus currentStatus = seat.getStatus();
-
-                    // Logic: If DB says AVAILABLE but Redis has a lock, return LOCKED
                     if (currentStatus == SeatStatus.AVAILABLE &&
                             seatLockService.isSeatLocked(flightId, seat.getSeatNumber())) {
                         currentStatus = SeatStatus.LOCKED;
                     }
-
                     return SeatResponseDTO.builder()
                             .seatId(seat.getSeatId())
                             .seatNumber(seat.getSeatNumber())
@@ -48,13 +47,20 @@ public class SeatService {
      */
     @Transactional
     public void confirmSeatBooking(Long flightId, String seatNumber) {
+        log.info("Confirming seat {} for flight {}", seatNumber, flightId);
+
         Seat seat = seatRepository.findByFlightIdAndSeatNumber(flightId, seatNumber)
                 .orElseThrow(() -> new RuntimeException("Seat not found"));
+
+        if (seat.getStatus() == SeatStatus.BOOKED) {
+            log.info("Seat {} is already booked. Treating as idempotent success.", seatNumber);
+            return;
+        }
 
         seat.setStatus(SeatStatus.BOOKED);
         seatRepository.save(seat);
 
-        // Remove the temporary Redis lock now that it's permanent in MySQL
+        // Remove the temporary Redis lock
         seatLockService.releaseSeatLock(flightId, seatNumber);
     }
 }

@@ -17,17 +17,17 @@ public class BookingConsumer {
     @KafkaListener(topics = "booking-request-topic", groupId = "booking-processor-group")
     public void onBookingRequestReceived(BookingRequest request) {
         log.info("Kafka: Received booking request for User: {}", request.getUserId());
-        String contactEmail = request.getPassengers().get(0).getEmail();
-        String firstName = request.getPassengers().get(0).getFirstName();
 
         try {
             Long bookingId = bookingService.processBooking(request);
 
-            log.info("Kafka: Booking processed successfully. ID: {}", bookingId);
-            emailService.sendBookingSuccessEmail(contactEmail, firstName, bookingId);
-
+            log.info("Kafka: Booking {} created. Waiting for Payment...", bookingId);
         } catch (Exception e) {
-            log.error("Kafka: Booking Failed. Reason: {}", e.getMessage());
+            log.error("Kafka: Booking Creation Failed. Reason: {}", e.getMessage());
+
+            String contactEmail = request.getPassengers().get(0).getEmail();
+            String firstName = request.getPassengers().get(0).getFirstName();
+
             emailService.sendBookingFailureEmail(contactEmail, firstName, e.getMessage());
         }
     }
