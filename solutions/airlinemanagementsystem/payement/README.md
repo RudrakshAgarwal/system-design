@@ -52,6 +52,20 @@ This service is designed to be **secure**, **idempotent**, and **resilient**, ca
 
 ---
 
+## UML Class Diagram
+
+![](../../../classdiagram/airline-management-system/payment-service/payment-service.png)
+
+#### Key Components Explained in the Diagram:
+* PaymentController: Handles incoming HTTP requests for initiation and verification. 
+* PaymentService: Contains the core logic for talking to Razorpay and managing the Payment entity. 
+* PaymentRequestConsumer: The security gatekeeper that listens to the Booking Service to get the authentic price before the user even pays. 
+* RefundListener: The "Safety Net" that listens for booking failures and triggers the processRefund logic in PaymentService. 
+* PaymentReconciliationJob: The background worker that checks for stuck payments. 
+* PaymentProducer: The messenger that talks back to Kafka to update the Booking Service.
+
+---
+
 ## Setup & Configuration
 
 ### Prerequisites
