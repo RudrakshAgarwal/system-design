@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.ZoneOffset;
+import java.util.Set;
 
 @Slf4j
 @Service
@@ -23,15 +24,16 @@ public class FlightCacheInvalidator {
     public void handleFlightUpdate(FlightEvent event) {
         log.info("Received Kafka Event: {}. Invalidating Cache...", event.getEventType());
 
-        // Invalidate specific search key: FLIGHT_SEARCH::SOURCE:DEST:DATE
+        // Pattern: FLIGHT_SEARCH::SOURCE:DEST:DATE*
         LocalDate flightDate = LocalDate.ofInstant(event.getDepartureTime(), ZoneOffset.UTC);
-        String cacheKey = SEARCH_CACHE_PREFIX + event.getSourceAirport() + ":" +
-                event.getDestinationAirport() + ":" + flightDate;
+        String pattern = SEARCH_CACHE_PREFIX + event.getSourceAirport() + ":" +
+                event.getDestinationAirport() + ":" + flightDate + "*";
 
-        redisTemplate.delete(cacheKey);
-        log.info("Cache evicted for key: {}", cacheKey);
+        Set<String> keys = redisTemplate.keys(pattern);
 
-        // Optimization: In a real system, we might delete all keys matching
-        // the source-destination pair because time changes might move flights between dates.
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+            log.info("Evicted {} cache keys matching pattern: {}", keys.size(), pattern);
+        }
     }
 }

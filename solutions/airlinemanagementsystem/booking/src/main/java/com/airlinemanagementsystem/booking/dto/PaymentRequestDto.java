@@ -1,16 +1,17 @@
 package com.airlinemanagementsystem.booking.dto;
 
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
+@Builder
 @AllArgsConstructor
 @NoArgsConstructor
-public class BookingRequest {
-    private Long flightId;
+public class PaymentRequestDto {
+    private Long bookingId;
     private String userId;
-    private List<PassengerDTO> passengers;
+    private Double amount;
+    private String currency; // Defaults to USD usually
 }
