@@ -54,7 +54,7 @@ This service is designed to be **secure**, **idempotent**, and **resilient**, ca
 
 ## UML Class Diagram
 
-![UML Class Diagram](/classdigram/airline-management-system/payment-service/payment-service.png)
+![](../../../classdiagram/airline-management-system/payment-service/payment-service.png)
 
 #### Key Components Explained in the Diagram:
 * PaymentController: Handles incoming HTTP requests for initiation and verification. 
