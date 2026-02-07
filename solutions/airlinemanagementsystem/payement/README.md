@@ -114,7 +114,7 @@ docker logs -f payment-service
 ```
 
 ## Debugging & Verification Commands
-Use these commands to "exec" (log in) to the runnixng containers and verify data manually.
+Use these commands to "exec" (log in) to the running containers and verify data manually.
 
 ### 1. Kafka: Check Topics & Messages
 Verify that services are communicating correctly.
