@@ -1,0 +1,106 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway-service
+
+  # --- SECURITY CONFIGURATION (Keycloak) ---
+  security:
+    oauth2:
+      client:
+        provider:
+          keycloak:
+            authorization-uri: http://localhost:8180/realms/airline-realm/protocol/openid-connect/auth
+            token-uri: http://airline-keycloak:8080/realms/airline-realm/protocol/openid-connect/token
+            user-info-uri: http://airline-keycloak:8080/realms/airline-realm/protocol/openid-connect/userinfo
+            jwk-set-uri: http://airline-keycloak:8080/realms/airline-realm/protocol/openid-connect/certs
+            user-name-attribute: preferred_username
+        registration:
+          airline-client-oidc:
+            provider: keycloak
+            client-id: airline-client
+            client-secret: "" # Leave empty for Public Client
+            authorization-grant-type: authorization_code
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope: openid, profile, email, roles
+      resourceserver:
+        jwt:
+          issuer-uri: http://airline-keycloak:8080/realms/airline-realm
+          jwk-set-uri: http://airline-keycloak:8080/realms/airline-realm/protocol/openid-connect/certs
+
+  # --- GATEWAY ROUTING CONFIGURATION ---
+  cloud:
+    gateway:
+      # Global CORS: Allows your Frontend (React/Angular) to call the Gateway
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowedOrigins: "http://localhost:3000" # Update this to your Frontend URL
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowedHeaders: "*"
+            allowCredentials: true
+
+      # Default Filters applied to ALL routes
+      default-filters:
+        # TokenRelay: Extracts the JWT from the browser session and passes it
+        # as a 'Authorization: Bearer <token>' header to downstream services.
+        - TokenRelay
+
+      # --- ROUTES ---
+      routes:
+        # Search Service
+        - id: search-service
+          uri: http://search-service:8084
+          predicates:
+            - Path=/api/v1/search/**,/v3/api-docs/**,/swagger-ui/**,/swagger-ui.html,/webjars/**
+          filters:
+            - RemoveRequestHeader=Cookie
+
+        # Flight Service
+        - id: flight-service
+          uri: http://flight-service:8081
+          predicates:
+            - Path=/api/v1/flights/**, /api/v1/airports/**, /api/v1/seats/**
+          filters:
+            - RemoveRequestHeader=Cookie
+
+        # Booking Service
+        - id: booking-service
+          uri: http://booking-service:8082
+          predicates:
+            - Path=/api/v1/bookings/**, /api/v1/luggage/**
+
+        # Payment Service
+        - id: payment-service
+          uri: http://payment-service:8083
+          predicates:
+            - Path=/api/v1/payments/**
+
+      # Timeouts (Resilience)
+      httpclient:
+        connect-timeout: 2000 # 2 seconds to connect
+        response-timeout: 5s  # 5 seconds to wait for response
+
+# --- ACTUATOR (Health Checks) ---
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, gateway
+  endpoint:
+    health:
+      show-details: always
+
+# --- LOGGING ---
+logging:
+  level:
+    root: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
+    org.springframework.web.reactive.function.client: INFO

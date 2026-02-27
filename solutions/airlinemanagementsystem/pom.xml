@@ -15,9 +15,12 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>flight</module>
-        <module>booking</module>
-        <module>payement</module>
+        <module>api-gateway-service</module>
+        <module>flight-service</module>
+        <module>booking-service</module>
+        <module>payment-service</module>
+        <module>notification-service</module>
+        <module>search-service</module>
     </modules>
 
     <dependencies>
@@ -25,6 +28,11 @@
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
             <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 </project>
