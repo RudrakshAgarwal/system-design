@@ -1,0 +1,38 @@
+{
+  "realm": "airline-realm",
+  "enabled": true,
+  "users": [
+    {
+      "username": "john_doe",
+      "enabled": true,
+      "firstName": "John",
+      "lastName": "Doe",
+      "email": "john@example.com",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password"
+        }
+      ],
+      "realmRoles": [ "user" ],
+      "clientRoles": {
+        "account": [ "view-profile", "manage-account" ]
+      }
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "airline-client",
+      "enabled": true,
+      "publicClient": true,
+      "directAccessGrantsEnabled": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "redirectUris": [
+        "http://localhost:8080/login/oauth2/code/keycloak",
+        "http://localhost:8080/*"
+      ],
+      "webOrigins": [ "*" ]
+    }
+  ]
+}

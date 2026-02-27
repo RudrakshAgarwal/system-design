@@ -1,0 +1,71 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: flight-service
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          # This URL must match the 'iss' field in the token exactly
+          issuer-uri: http://localhost:8180/realms/airline-realm
+          # URL to fetch the Public Key for signature validation
+          jwk-set-uri: http://airline-keycloak:8080/realms/airline-realm/protocol/openid-connect/certs
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/flight_service_db?createDatabaseIfNotExist=true
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: flight-cache-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring:
+          json:
+            trusted:
+              packages: "*"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      redisSearch:
+        registerHealthMap: true
+        slidingWindowSize: 5
+        permittedNumberOfCallsInHalfOpenState: 3
+        failureRateThreshold: 50
+        waitDurationInOpenState: 5s
+
+
+amadeus:
+  api:
+    key: ${AMADEUS_TEST_API_KEY}
+    secret: ${AMADEUS_TEST_API_SECRET}
+
+flight-service:
+  data:
+    airports-path: "data/airports.json"
+    aircrafts-path: "data/aircrafts.dat"

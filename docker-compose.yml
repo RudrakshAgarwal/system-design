@@ -1,6 +1,35 @@
-version: '3.8'
+networks:
+  airline-network:
+    driver: bridge
+
 services:
-  # 1. Redis (Optimized)
+
+  # 1. MySQL (Updated with Platform Fix)
+  mysql:
+    image: mysql:8.0
+    platform: linux/amd64  # CRITICAL for Mac M1/M2/M3
+    container_name: airline-mysql
+    ports:
+      - "3306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      SPRING_JPA_SHOW_SQL: true
+      SPRING_JPA_PROPERTIES_HIBERNATE_FORMAT_SQL: true
+      logging.level.org.hibernate.SQL: DEBUG
+      logging.level.org.hibernate.type.descriptor.sql.BasicBinder: TRACE
+    command: --init-file /docker-entrypoint-initdb.d/init.sql
+    volumes:
+      - ./mysql-init:/docker-entrypoint-initdb.d
+      - mysql_data:/var/lib/mysql
+    networks:
+      - airline-network
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  # 2. Redis
   redis:
     image: redis:7.2-alpine
     container_name: flight-redis
@@ -9,21 +38,22 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 128M
+    networks:
+      - airline-network
 
-  # 2. Kafka (KRaft Mode - No Zookeeper!)
+  # 3. Kafka (KRaft Mode)
   kafka:
     image: confluentinc/cp-kafka:7.6.0
     container_name: flight-kafka
     ports:
       - "9092:9092"
     environment:
-      # --- KRAFT CONFIGURATION ---
       KAFKA_NODE_ID: 1
+      KAFKA_BROKER_ID: 1
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
       KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_PROCESS_ROLES: 'broker,controller'
@@ -32,12 +62,192 @@ services:
       KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
       KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
       KAFKA_LOG_DIRS: '/tmp/kraft-combined-logs'
-      # Generates a random cluster ID for you
       CLUSTER_ID: 'MkU3OEVBNTcwNTJENDM2Qk'
-
-      # --- OPTIMIZATION (Memory Cap) ---
-      KAFKA_HEAP_OPTS: "-Xmx256M -Xms256M"
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
+    networks:
+      - airline-network
+    healthcheck:
+      test: nc -z localhost 9092 || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+
+  # --- MICROSERVICES (Updated to use 'admin' user) ---
+
+  flight-service:
+    build: ./solutions/airlinemanagementsystem/flight-service
+    container_name: flight-service
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/flight_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_DATA_REDIS_HOST=redis
+      - AMADEUS_TEST_API_KEY=${AMADEUS_TEST_API_KEY}
+      - AMADEUS_TEST_API_SECRET=${AMADEUS_TEST_API_SECRET}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - airline-network
+
+  booking-service:
+    build: ./solutions/airlinemanagementsystem/booking-service
+    container_name: booking-service
+    ports:
+      - "8082:8082"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      # UPDATED USER/PASS HERE
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/booking_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - FLIGHT_SERVICE_URL=http://flight-service:8081
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      flight-service:
+        condition: service_started
+    networks:
+      - airline-network
+
+  payment-service:
+    build: ./solutions/airlinemanagementsystem/payment-service
+    container_name: payment-service
+    ports:
+      - "8083:8083"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/payment_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
+      - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_123}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-secret}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - airline-network
+
+  api-gateway-service:
+    build: ./solutions/airlinemanagementsystem/api-gateway-service
+    container_name: api-gateway-service
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+    depends_on:
+      - flight-service
+      - booking-service
+      - payment-service
+    networks:
+      - airline-network
+
+  search-service:
+    build: ./solutions/airlinemanagementsystem/search-service
+    container_name: search-service
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=docker
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
+      - SPRING_ELASTICSEARCH_URIS=http://elasticsearch:9200
+    depends_on:
+      kafka:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - airline-network
+
+  # Keep Keycloak configs as they were...
+  keycloak-db:
+    image: postgres:15
+    container_name: keycloak-postgres
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: password
+    volumes:
+      - keycloak_data:/var/lib/postgresql/data
+    networks:
+      - airline-network
+
+  # Keycloak (Identity Server)
+  keycloak:
+    image: quay.io/keycloak/keycloak:23.0.0
+    container_name: airline-keycloak
+    command: start-dev --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: ${KC_DB_USERNAME}
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_HOSTNAME_URL: ${KC_HOSTNAME_URL}
+      KC_HOSTNAME_ADMIN_URL: ${KC_HOSTNAME_ADMIN_URL}
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+    ports:
+      - "8180:8080"
+    volumes:
+      - ./keycloak-init:/opt/keycloak/data/import
+    depends_on:
+      - keycloak-db
+    networks:
+      - airline-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8080/health/ready" ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.12.2
+    container_name: elasticsearch-node
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200"
+    networks:
+      - airline-network
+    healthcheck:
+      test: [ "CMD-SHELL", "curl -s -f http://localhost:9200 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.12.2
+    container_name: kibana
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    depends_on:
+      - elasticsearch
+    networks:
+      - airline-network
+
+volumes:
+  mysql_data:
+  keycloak_data:
