@@ -66,7 +66,7 @@ spring:
         - id: flight-service
           uri: http://flight-service:8081
           predicates:
-            - Path=/api/v1/flights/**, /api/v1/airports/**, /api/v1/seats/**
+            - Path=/api/v1/flights/**, /api/v1/airports/**, /api/v1/seats/**, /api/v1/simulation/**
           filters:
             - RemoveRequestHeader=Cookie
 

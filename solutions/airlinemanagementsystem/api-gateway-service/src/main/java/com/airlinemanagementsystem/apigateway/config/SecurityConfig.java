@@ -22,6 +22,9 @@ public class SecurityConfig {
                         .pathMatchers("/api/v1/search/**").permitAll()
                         .pathMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
 
+                        // Allow public access to Simulation endpoint
+                        .pathMatchers("/api/v1/simulation/**").permitAll()
+
                         // Require authentication for EVERYTHING else (Booking, Payment, Inventory Management)
                         .anyExchange().authenticated()
                 )
