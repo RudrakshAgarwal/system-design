@@ -58,7 +58,20 @@ resilience4j:
         permittedNumberOfCallsInHalfOpenState: 3
         failureRateThreshold: 50
         waitDurationInOpenState: 5s
-
+      flakyFly:
+        registerHealthIndicator: true
+        slidingWindowSize: 5               # Look at the last 5 calls
+        permittedNumberOfCallsInHalfOpenState: 2
+        failureRateThreshold: 50           # Open if 50% or more fail
+        waitDurationInOpenState: 10s       # Wait 10 seconds before trying again
+      slowJet:
+        registerHealthIndicator: true
+        slidingWindowSize: 5
+        permittedNumberOfCallsInHalfOpenState: 2
+        failureRateThreshold: 50
+        waitDurationInOpenState: 10s
+        slowCallRateThreshold: 100         # Open if 100% of calls in the window are slow
+        slowCallDurationThreshold: 2s      # Any call taking > 2 seconds is marked as a "slow call"
 
 amadeus:
   api:

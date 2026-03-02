@@ -18,21 +18,24 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // ✅ 1. Allow Swagger UI & API Docs (Fixes "No operations defined")
+                        // Allow Swagger UI & API Docs
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // ✅ 2. Allow Public Access to Flight Search (Fixes Local 401 for GET)
+                        // Allow Public Access to Flight Search
                         .requestMatchers(HttpMethod.GET, "/api/v1/flights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/airports/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/seats/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/aircrafts/**").permitAll()
 
-                        // 🔒 3. Everything else (e.g., POST/PUT/DELETE) requires Authentication
+                        // Allow public access to our Week 2 Simulation endpoint
+                        .requestMatchers("/api/v1/simulation/**").permitAll()
+
+                        // Everything else (e.g., POST/PUT/DELETE) requires Authentication
                         .anyRequest().authenticated()
                 )
                 // Uses the Keycloak settings from application.yml
