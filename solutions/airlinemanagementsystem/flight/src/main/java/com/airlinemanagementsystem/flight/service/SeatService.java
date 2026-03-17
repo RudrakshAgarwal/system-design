@@ -20,47 +20,43 @@ public class SeatService {
     private final SeatRepository seatRepository;
     private final SeatLockService seatLockService;
 
-    /**
-     * Fetches all seats for a flight and overlays Redis lock info.
-     */
     @Transactional(readOnly = true)
     public List<SeatResponseDTO> getSeatsByFlight(Long flightId) {
-        return seatRepository.findByFlightId(flightId).stream()
+        List<Seat> seats = seatRepository.findByFlightId(flightId);
+        return seats.stream()
                 .map(seat -> {
-                    SeatStatus currentStatus = seat.getStatus();
-                    if (currentStatus == SeatStatus.AVAILABLE &&
-                            seatLockService.isSeatLocked(flightId, seat.getSeatNumber())) {
-                        currentStatus = SeatStatus.LOCKED;
+                    SeatStatus status = seat.getStatus();
+                    if (status == SeatStatus.AVAILABLE) {
+                        if (seatLockService.isSeatLocked(flightId, seat.getSeatNumber())) {
+                            status = SeatStatus.LOCKED;
+                        }
                     }
+
                     return SeatResponseDTO.builder()
                             .seatId(seat.getSeatId())
                             .seatNumber(seat.getSeatNumber())
                             .seatType(seat.getSeatType())
-                            .status(currentStatus)
+                            .status(status)
+                            .price(seat.getPrice())
                             .build();
                 })
                 .collect(Collectors.toList());
     }
 
-    /**
-     * Finalizes the seat status in the DB once the Booking Service confirms payment.
-     */
     @Transactional
-    public void confirmSeatBooking(Long flightId, String seatNumber) {
-        log.info("Confirming seat {} for flight {}", seatNumber, flightId);
+    public void confirmSeatBooking(Long flightId, String seatNumber, String userId) {
+        log.info("Confirming permanent booking: Flight {} Seat {} for User {}", flightId, seatNumber, userId);
 
         Seat seat = seatRepository.findByFlightIdAndSeatNumber(flightId, seatNumber)
-                .orElseThrow(() -> new RuntimeException("Seat not found"));
+                .orElseThrow(() -> new RuntimeException("Seat not found: " + seatNumber));
 
         if (seat.getStatus() == SeatStatus.BOOKED) {
-            log.info("Seat {} is already booked. Treating as idempotent success.", seatNumber);
+            log.info("Seat {} is already permanently booked. Ignoring duplicate confirmation.", seatNumber);
             return;
         }
 
         seat.setStatus(SeatStatus.BOOKED);
         seatRepository.save(seat);
-
-        // Remove the temporary Redis lock
-        seatLockService.releaseSeatLock(flightId, seatNumber);
+        seatLockService.releaseSeatLock(flightId, seatNumber, userId);
     }
 }
