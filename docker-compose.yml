@@ -4,13 +4,13 @@ networks:
 
 services:
 
-  # 1. MySQL (Updated with Platform Fix)
+  # 1. MySQL
   mysql:
     image: mysql:8.0
-    platform: linux/amd64  # CRITICAL for Mac M1/M2/M3
+    platform: linux/amd64
     container_name: airline-mysql
     ports:
-      - "3306:3306"
+      - "3307:3306"  # <-- CHANGED THIS LINE TO 3307
     environment:
       MYSQL_ROOT_PASSWORD: root
       SPRING_JPA_SHOW_SQL: true
@@ -106,7 +106,6 @@ services:
       - "8082:8082"
     environment:
       - SPRING_PROFILES_ACTIVE=docker
-      # UPDATED USER/PASS HERE
       - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/booking_service_db?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${SPRING_DATASOURCE_USERNAME}
       - SPRING_DATASOURCE_PASSWORD=${SPRING_DATASOURCE_PASSWORD}
@@ -135,6 +134,8 @@ services:
       - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:29092
       - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID:-rzp_test_123}
       - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET:-secret}
+      - EMAIL_ID=${EMAIL_ID}
+      - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
     depends_on:
       mysql:
         condition: service_healthy

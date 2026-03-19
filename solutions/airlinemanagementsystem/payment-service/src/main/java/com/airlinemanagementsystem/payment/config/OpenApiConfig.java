@@ -1,4 +1,4 @@
-package com.airlinemanagementsystem.flight.config;
+package com.airlinemanagementsystem.payment.config;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
@@ -13,17 +13,16 @@ import org.springframework.context.annotation.Configuration;
 public class OpenApiConfig {
 
     @Bean
-    public OpenAPI flightServiceOpenAPI() {
+    public OpenAPI paymentServiceOpenAPI() {
         final String securitySchemeName = "bearerAuth";
 
         return new OpenAPI()
                 .info(new Info()
-                        .title("Flight & Inventory Service API")
-                        .description("API for managing aircraft, flights, and seat inventory in the Airline Management System.")
+                        .title("Payment Service API")
+                        .description("API for managing Razorpay integrations, Idempotency, and Sagas.")
                         .version("1.0.0")
                         .contact(new Contact()
-                                .name("System Design Solution")
-                                .email("support@systemdesign.com")))
+                                .name("System Design Solution")))
                 .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
                 .components(new Components()
                         .addSecuritySchemes(securitySchemeName,
