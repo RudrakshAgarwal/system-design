@@ -18,27 +18,27 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        // Allow Swagger UI & API Docs
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
 
-                        // Allow Public Access to Flight Search
                         .requestMatchers(HttpMethod.GET, "/api/v1/flights/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/search/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/airports/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/seats/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/aircrafts/**").permitAll()
-
-                        // Allow public access to our Week 2 Simulation endpoint
                         .requestMatchers("/api/v1/simulation/**").permitAll()
 
-                        // Everything else (e.g., POST/PUT/DELETE) requires Authentication
+                        .requestMatchers(HttpMethod.POST,
+                                "/api/v1/seats/lock",
+                                "/api/v1/seats/confirm",
+                                "/api/v1/flights/*/seats/*/unlock"
+                        ).permitAll()
+
                         .anyRequest().authenticated()
                 )
-                // Uses the Keycloak settings from application.yml
                 .oauth2ResourceServer(oauth2 -> oauth2.jwt(Customizer.withDefaults()));
 
         return http.build();

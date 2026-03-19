@@ -18,7 +18,7 @@ import java.util.stream.Collectors;
 public class SeatService {
 
     private final SeatRepository seatRepository;
-    private final SeatLockService seatLockService; // Your existing service
+    private final SeatLockService seatLockService;
 
     @Transactional(readOnly = true)
     public List<SeatResponseDTO> getSeatsByFlight(Long flightId) {
@@ -26,7 +26,6 @@ public class SeatService {
         return seats.stream()
                 .map(seat -> {
                     SeatStatus status = seat.getStatus();
-
                     if (status == SeatStatus.AVAILABLE) {
                         if (seatLockService.isSeatLocked(flightId, seat.getSeatNumber())) {
                             status = SeatStatus.LOCKED;
@@ -45,19 +44,19 @@ public class SeatService {
     }
 
     @Transactional
-    public void confirmSeatBooking(Long flightId, String seatNumber) {
-        log.info("Confirming seat: Flight {} Seat {}", flightId, seatNumber);
+    public void confirmSeatBooking(Long flightId, String seatNumber, String userId) {
+        log.info("Confirming permanent booking: Flight {} Seat {} for User {}", flightId, seatNumber, userId);
 
         Seat seat = seatRepository.findByFlightIdAndSeatNumber(flightId, seatNumber)
                 .orElseThrow(() -> new RuntimeException("Seat not found: " + seatNumber));
 
         if (seat.getStatus() == SeatStatus.BOOKED) {
+            log.info("Seat {} is already permanently booked. Ignoring duplicate confirmation.", seatNumber);
             return;
         }
 
         seat.setStatus(SeatStatus.BOOKED);
         seatRepository.save(seat);
-
-        seatLockService.releaseSeatLock(flightId, seatNumber);
+        seatLockService.releaseSeatLock(flightId, seatNumber, userId);
     }
 }

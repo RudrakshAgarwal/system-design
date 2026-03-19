@@ -11,13 +11,13 @@ import org.springframework.stereotype.Service;
 import java.util.UUID;
 
 @Slf4j
-@Service
+// @Service
 @RequiredArgsConstructor
 public class MockPaymentService {
 
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
-    @KafkaListener(topics = "payment-request-topic", groupId = "mock-payment-group")
+    // @KafkaListener(topics = "payment-request-topic", groupId = "mock-payment-group")
     public void processPayment(PaymentRequestDto request) {
         log.info("💳 MOCK PAYMENT: Processing for Booking ID: {}", request.getBookingId());
 

@@ -27,10 +27,10 @@ public class Booking {
     private String bookingReference;
 
     @NotNull(message = "Flight ID is required")
-    private Long flightId; // Logical reference to the Flight Service (No Foreign Key constraint)
+    private Long flightId;
 
     @NotNull(message = "User ID is required")
-    private String userId; // Typically comes from JWT token
+    private String userId;
 
     @NotNull
     private Double totalAmount;
@@ -40,8 +40,6 @@ public class Booking {
 
     private LocalDateTime bookingDate;
 
-    // Bidirectional relationship: One Booking has Many Passengers
-    // CascadeType.ALL ensures that saving a Booking automatically saves the Passengers
     @OneToMany(mappedBy = "booking", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Passenger> passengers = new ArrayList<>();
 
@@ -57,7 +55,6 @@ public class Booking {
     @PrePersist
     public void generateReference() {
         if (this.bookingReference == null) {
-            // Generates a short unique PNR-like string (e.g., "BK-12345678")
             this.bookingReference = "BK-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         }
     }

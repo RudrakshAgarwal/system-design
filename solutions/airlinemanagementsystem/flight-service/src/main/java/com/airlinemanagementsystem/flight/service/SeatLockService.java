@@ -8,7 +8,6 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -32,7 +31,7 @@ public class SeatLockService {
         } else {
             Object currentOwner = redisTemplate.opsForValue().get(lockKey);
             log.warn("Seat {} already locked by user: {}", seatNumber, currentOwner);
-            throw new SeatAlreadyLockedException(seatNumber);
+            throw new SeatAlreadyLockedException(seatNumber); // Business exception
         }
     }
 
@@ -51,10 +50,23 @@ public class SeatLockService {
         return false;
     }
 
-    public void releaseSeatLock(Long flightId, String seatNumber) {
+    public void releaseSeatLock(Long flightId, String seatNumber, String userId) {
         String lockKey = generateLockKey(flightId, seatNumber);
-        redisTemplate.delete(lockKey);
-        log.info("Lock released: Flight {} Seat {}", flightId, seatNumber);
+
+        Object currentOwner = redisTemplate.opsForValue().get(lockKey);
+
+        if (currentOwner == null) {
+            log.info("Lock already expired or released idempotently for Flight {} Seat {}", flightId, seatNumber);
+            return;
+        }
+
+        if (userId.equals(currentOwner.toString())) {
+            redisTemplate.delete(lockKey);
+            log.info("Lock safely released: Flight {} Seat {} by User {}", flightId, seatNumber, userId);
+        } else {
+            log.warn("SECURITY: User {} attempted to release lock owned by {}! Flight {} Seat {}",
+                    userId, currentOwner, flightId, seatNumber);
+        }
     }
 
     private String generateLockKey(Long flightId, String seatNumber) {

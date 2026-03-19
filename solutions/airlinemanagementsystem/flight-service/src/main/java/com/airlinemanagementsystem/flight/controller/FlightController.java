@@ -39,15 +39,23 @@ public class FlightController {
 
     @Operation(summary = "Update flight status", description = "Updates status and triggers Kafka events.")
     @PatchMapping("/{flightId}/status")
-    public ResponseEntity<Flight> updateStatus(
+    public ResponseEntity<String> updateStatus(
             @PathVariable Long flightId,
             @RequestParam FlightStatus status) {
-        return ResponseEntity.ok(flightService.updateFlightStatus(flightId, status));
+        flightService.updateFlightStatus(flightId, status);
+
+        return ResponseEntity.ok("Flight status successfully updated to " + status);
     }
 
     @Operation(summary = "Get all scheduled flights")
     @GetMapping
     public ResponseEntity<List<Flight>> getAllFlights() {
+        return ResponseEntity.ok(flightService.getAllFlights());
+    }
+
+    @Operation(summary = "Get all scheduled flights")
+    @GetMapping
+    public ResponseEntity<List<Flight>> getAllFlightsByFlightId() {
         return ResponseEntity.ok(flightService.getAllFlights());
     }
 }

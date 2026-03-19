@@ -31,13 +31,12 @@ public class PaymentEventListener {
         Booking booking = bookingRepository.findById(event.getBookingId()).orElse(null);
         if (booking == null) return;
 
-        // Idempotency check
         if (booking.getStatus() == BookingStatus.CONFIRMED) return;
 
         if ("SUCCESS".equals(event.getStatus())) {
             try {
                 booking.getPassengers().forEach(p ->
-                        flightServiceClient.confirmSeat(booking.getFlightId(), p.getSeatNumber())
+                        flightServiceClient.confirmSeat(booking.getFlightId(), p.getSeatNumber(), booking.getUserId())
                 );
 
                 booking.setStatus(BookingStatus.CONFIRMED);
@@ -57,7 +56,7 @@ public class PaymentEventListener {
                 log.info("✅ Booking Confirmed. Notification Sent.");
 
             } catch (Exception e) {
-                log.error("Confirmation Failed. Rolling back...");
+                log.error("Confirmation Failed. Rolling back! Critical Reason: {}", e.getMessage(), e);
                 handleSagaCompensation(booking);
             }
         } else {
